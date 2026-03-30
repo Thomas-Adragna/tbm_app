@@ -52,6 +52,11 @@ import androidx.compose.ui.platform.LocalContext
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import org.osmdroid.config.Configuration
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
 import retrofit2.http.GET
 
@@ -61,12 +66,46 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        Configuration.getInstance().load(
+            applicationContext,
+            androidx.preference.PreferenceManager.getDefaultSharedPreferences(applicationContext)
+        )
+
+        Configuration.getInstance().userAgentValue = packageName
+
         setContent {
             TbmAppTheme {
                 val navController = rememberNavController()
                 val viewModel: VeloViewModel = viewModel()
 
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                val backStackEntry by navController.currentBackStackEntryAsState()
+                val currentRoute = backStackEntry?.destination?.route
+
+                val bottomItems = listOf(BottomNavItem.Liste, BottomNavItem.Carte)
+
+                Scaffold(
+                    modifier = Modifier.fillMaxSize(),
+                    bottomBar = {
+                        if (currentRoute in bottomItems.map { it.route }) {
+                            NavigationBar {
+                                bottomItems.forEach { item ->
+                                    NavigationBarItem(
+                                        selected = currentRoute == item.route,
+                                        onClick = {
+                                            navController.navigate(item.route) {
+                                                popUpTo(Routes.HOME) { saveState = true }
+                                                launchSingleTop = true
+                                                restoreState = true
+                                            }
+                                        },
+                                        icon = { Icon(item.icon, contentDescription = item.label) },
+                                        label = { Text(item.label) }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                ) { innerPadding ->
                     NavHost(
                         navController = navController,
                         startDestination = Routes.HOME,
@@ -76,6 +115,16 @@ class MainActivity : ComponentActivity() {
                             HomeScreen(
                                 viewModel = viewModel,
                                 onStationClick = { record ->
+                                    val index = viewModel.stations.value.indexOf(record)
+                                    navController.navigate(Routes.detail(index))
+                                }
+                            )
+                        }
+
+                        composable(Routes.MAP) {
+                            MapScreen(
+                                viewModel = viewModel,
+                                onMarkerClick = { record ->
                                     val index = viewModel.stations.value.indexOf(record)
                                     navController.navigate(Routes.detail(index))
                                 }

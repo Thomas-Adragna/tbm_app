@@ -53,10 +53,11 @@ class VeloViewModel : ViewModel() {
 
                 _messageStatus.value = "Mis à jour à $heure"
             } catch (e: Exception) {
-                _messageStatus.value = "Erreur : ${e.localizedMessage}"
+                _messageStatus.value = "Erreur : ${e.javaClass.simpleName} - ${e.localizedMessage}"
             } finally {
                 _isRefreshing.value = false
             }
+
         }
     }
 
